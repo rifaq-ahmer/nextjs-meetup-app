@@ -1,61 +1,61 @@
 import React from "react";
+import { MongoClient, ObjectId } from "mongodb";
+import Head from "next/head";
 import MeetupDetail from "../../components/meetups/meetupDetail";
 
 const meetupDetails = (props) => {
 	return (
 		<>
+			<Head>
+				<title>{props.meetupData.title}</title>
+				<meta name="description" content={props.meetupData.description}></meta>
+			</Head>
 			<MeetupDetail
-				image="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHfkfESvylFJ1EHsA27pZedw4qJRf7anptwA&usqp=CAU"
-				address="The Netherlanda"
-				title="The First Meetup"
-				description="Meetup in The Netherlands"
+				image={props.meetupData.image}
+				address={props.meetupData.address}
+				title={props.meetupData.title}
+				description={props.meetupData.description}
 			/>
-			{/* <MeetupDetail
-				image={props.image}
-				address={props.address}
-				title={props.title}
-				description={props.description}
-			/> */}
 		</>
 	);
 };
 export async function getStaticPaths() {
+	const client = await MongoClient.connect(
+		"mongodb+srv://rifaq:adminpassword@cluster0.zaqzu.mongodb.net/meetups?retryWrites=true&w=majority"
+	);
+	const db = client.db();
+	const meetupCollections = db.collection("meetups");
+	const meetups = await meetupCollections.find({}, { _id: 1 }).toArray();
+	client.close();
 	return {
 		fallback: false,
-		paths: [
-			{
-				params: {
-					meetupId: "m1",
-				},
-			},
-			{
-				params: {
-					meetupId: "m2",
-				},
-			},
-			{
-				params: {
-					meetupId: "m3",
-				},
-			},
-		],
+		paths: meetups.map((meetup) => ({
+			params: { meetupId: meetup._id.toString() },
+		})),
 	};
 }
 
 export async function getStaticProps(context) {
 	const meetupId = context.params.meetupId;
-	console.log(meetupId);
+	const client = await MongoClient.connect(
+		"mongodb+srv://rifaq:adminpassword@cluster0.zaqzu.mongodb.net/meetups?retryWrites=true&w=majority"
+	);
+	const db = client.db();
+	const meetupCollections = db.collection("meetups");
+	const selectedMeetup = await meetupCollections.findOne({
+		_id: ObjectId(meetupId),
+	});
+	client.close();
 
 	//fetch the single meetup data
 	return {
 		props: {
 			meetupData: {
-				id: meetupId,
-				image:
-					"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSHfkfESvylFJ1EHsA27pZedw4qJRf7anptwA&usqp=CAU",
-				address: "The Netherlanda",
-				title: "The First Meetup",
-				description: "Meetup in The Netherlands",
+				id: selectedMeetup._id.toString(),
+				title: selectedMeetup.title,
+				image: selectedMeetup.image,
+				description: selectedMeetup.description,
+				address: selectedMeetup.address,
 			},
 		},
 	};
